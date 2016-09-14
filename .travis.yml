@@ -1,6 +1,7 @@
+language: python
 services: docker
 env:
-  image_name: louisbilliet/bind:testing
+  image_name="louisbilliet/bind:testing"
 install:
   - bundle install
 before_script:

@@ -1,31 +1,34 @@
 require 'serverspec'
-
-describe docker_image('louisbilliet/bind:testing') do
-  its(['ContainerConfig.ExposedPorts']) { should include '53/tcp' }
-  its(['ContainerConfig.ExposedPorts']) { should include '53/udp' }
-  its(['Config.Cmd']) { should include '/usr/sbin/named' }
-  its(['Config.Cmd']) { should include '-f' }
-end
-
-describe docker_container('dns') do
-  its(['State.Status']) { should eq "running" }
-end
-
-{
-  "dns1" => "127.0.0.5",
-  "dns2" => "127.0.0.6",
-  "www" => "127.0.1.5"
-}.each do |name, ip|
-  describe command("dig @127.0.0.1 -p 1053 #{name}") do
-    its(:stdout) { should match /#{name}.home.\s*604800\s*IN\s*A\s*#{ip}/ }
-    its(:stdout) { should match /home.\s*604800\s*IN\s*NS\s*dns1.home./ }
-    its(:stdout) { should match /home.\s*604800\s*IN\s*NS\s*dns2.home./ }
-  end
-end
+require 'rspec'
+require 'rspec-dns'
 
 set :os, family: :debian
 set :backend, :docker
-set :docker_image, @image.id
+set :docker_image, 'louisbilliet/bind:testing'
+
+describe 'DNS custom configuration tests' do
+  it "resolves #{name}" do
+    expect('home').to have_dns.with_type('SOA').and_rname('root.home').config(nameserver: '127.0.0.1', port: 1053)
+    expect('home').to have_dns.with_type('SOA').and_mname('home').config(nameserver: '127.0.0.1', port: 1053)
+    expect('home').to have_dns.with_type('NS').at_least(2).config(nameserver: '127.0.0.1', port: 1053)
+    expect('dns1.home').to have_dns.with_type('A').and_address('127.0.0.5').config(nameserver: '127.0.0.1', port: 1053)
+    expect('dns2.home').to have_dns.with_type('A').and_address('127.0.0.6').config(nameserver: '127.0.0.1', port: 1053)
+    expect('www.home').to have_dns.with_type('A').and_address('127.0.1.5').config(nameserver: '127.0.0.1', port: 1053)
+  end
+end
+
+describe package('bind9') do
+  it { should be_installed }
+end
+
+describe port('53') do
+  it { should be_listening.with('tcp') }
+  it { should be_listening.with('udp') }
+end
+
+describe process('named') do
+  it { should be_running }
+end
 
 describe file('/etc/bind/named.conf') do
   [
@@ -36,6 +39,7 @@ describe file('/etc/bind/named.conf') do
     its(:content) { should match /^\s*#{Regexp.escape(line)}/ }
   end
 end
+
 describe file('/etc/bind/named.conf.local') do
   [
     'include "/etc/bind/zones.rfc1918";',
@@ -44,6 +48,7 @@ describe file('/etc/bind/named.conf.local') do
     its(:content) { should match /^\s*#{Regexp.escape(line)}/ }
   end
 end
+
 describe file('/etc/bind/named.conf.options') do
   [
 	'directory "/var/cache/bind";',
