@@ -1,0 +1,14 @@
+services: docker
+env:
+  image_name: louisbilliet/bind:testing
+install:
+  - bundle install
+before_script:
+  - docker build -t ${image_name} .
+script:
+  - docker run -d --name dns --publish 1053:53/tcp --publish 1053:53/udp -v $(pwd)/tests/files:/data ${image_name}
+  - bundle exec rspec tests/spec/serverspec.rb
+after_script:
+  - docker stop dns
+  - docker rm dns
+  - docker rmi ${image_name}

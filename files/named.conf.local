@@ -1,0 +1,2 @@
+include "/etc/bind/zones.rfc1918";
+include "/data/zone.conf";
