@@ -9,6 +9,10 @@ before_script:
 script:
   - docker run -d --name dns --publish 1053:53/tcp --publish 1053:53/udp -v $(pwd)/tests/files:/data ${image_name}
   - bundle exec rspec tests/spec/serverspec.rb
+after_success:
+  - if [ ${TRAVIS_BRANCH} = 'master' ]; then docker tag ${image_name}:testing ${image_name}:latest; fi
+  - if [ ${TRAVIS_BRANCH} = 'master' ]; then docker login -u ${docker_hub_login} -p ${docker_hub_passwd}; fi
+  - if [ ${TRAVIS_BRANCH} = 'master' ]; then docker push ${image_name}:latest; fi
 after_script:
   - docker stop dns
   - docker rm dns
