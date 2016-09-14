@@ -16,4 +16,4 @@ after_success:
 after_script:
   - docker stop dns
   - docker rm dns
-  - docker rmi ${image_name}:testing ${image_name}:lastest
+  - docker rmi ${image_name}:testing ${image_name}:latest
