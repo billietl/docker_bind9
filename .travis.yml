@@ -1,13 +1,13 @@
 language: python
 services: docker
 env:
-  image_name="louisbilliet/bind:testing"
+  image_name="louisbilliet/bind"
 install:
   - bundle install
 before_script:
-  - docker build -t ${image_name} .
+  - docker build -t ${image_name}:testing .
 script:
-  - docker run -d --name dns --publish 1053:53/tcp --publish 1053:53/udp -v $(pwd)/tests/files:/data ${image_name}
+  - docker run -d --name dns --publish 1053:53/tcp --publish 1053:53/udp -v $(pwd)/tests/files:/data ${image_name}:testing
   - bundle exec rspec tests/spec/serverspec.rb
 after_success:
   - if [ ${TRAVIS_BRANCH} = 'master' ]; then docker tag ${image_name}:testing ${image_name}:latest; fi
@@ -16,4 +16,4 @@ after_success:
 after_script:
   - docker stop dns
   - docker rm dns
-  - docker rmi ${image_name}
+  - docker rmi ${image_name}:testing ${image_name}:lastest
